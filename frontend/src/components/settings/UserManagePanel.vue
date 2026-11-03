@@ -82,11 +82,12 @@
       :confirmLoading="saving"
       @ok="handleSubmit"
     >
-      <a-form :model="form" layout="vertical" style="margin-top: 16px;">
+      <a-form :model="form" layout="vertical" style="margin-top: 16px;" autocomplete="off">
         <a-form-item :label="pageText('pages.userUsername')" required>
           <a-input
             v-model:value="form.username"
             :disabled="isEdit"
+            autocomplete="off"
             :placeholder="pageText('pages.userUsernamePlaceholder')"
           />
         </a-form-item>

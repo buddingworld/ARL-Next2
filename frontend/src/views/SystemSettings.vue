@@ -108,7 +108,13 @@
           </div>
           
           <a-spin :spinning="generalLoading">
-            <a-form :label-wrap="true" layout="vertical">
+            <a-form autocomplete="off" :label-wrap="true" layout="vertical">
+              <div style="display: none;" aria-hidden="true">
+                <input type="text" name="arl-decoy-username" autocomplete="username" tabindex="-1" />
+                <input type="password" name="arl-decoy-password" autocomplete="new-password" tabindex="-1" />
+              </div>
+              <!-- 抑制浏览器自动填充：让浏览器把已保存的凭据落到上面这对隐藏输入上，
+                   而不是下方的 API KEY / Token 输入框 -->
 
               <!-- 1. 空间测绘情报 -->
               <a-card data-setting-anchor="fofa" :title="pageText('pages.assetDiscoveryIntelligenceFofa')" size="small" class="page-config-card">
@@ -120,7 +126,7 @@
                   </a-col>
                   <a-col :span="12">
                     <a-form-item label="FOFA KEY" style="margin-bottom: 12px;">
-                      <a-input-password v-model:value="generalForm.fofa_key" :placeholder="pageText('pages.enterYourFofaApiKey')" />
+                      <a-input-password autocomplete="new-password" v-model:value="generalForm.fofa_key" :placeholder="pageText('pages.enterYourFofaApiKey')" />
                     </a-form-item>
                   </a-col>
                   <a-col :span="12">
@@ -141,7 +147,7 @@
                 <a-row :gutter="24">
                   <a-col :span="12">
                     <a-form-item label="0.zone API KEY" class="page-flush-bottom">
-                      <a-input-password v-model:value="generalForm.zerozone_key" :placeholder="pageText('pages.enterYourZerozoneApiKey')" />
+                      <a-input-password autocomplete="new-password" v-model:value="generalForm.zerozone_key" :placeholder="pageText('pages.enterYourZerozoneApiKey')" />
                     </a-form-item>
                   </a-col>
                 </a-row>
@@ -160,7 +166,7 @@
                       <a-input v-model:value="generalForm.tyc_id" :placeholder="pageText('pages.enterYourTianyanchaId')" />
                     </a-form-item>
                     <a-form-item :label="pageText('pages.tianyanchaTokenXAuthToken')" class="page-flush-bottom">
-                      <a-input-password v-model:value="generalForm.tyc_token" :placeholder="pageText('pages.enterAJwtToken')" />
+                      <a-input-password autocomplete="new-password" v-model:value="generalForm.tyc_token" :placeholder="pageText('pages.enterAJwtToken')" />
                     </a-form-item>
                   </a-card>
                 </a-col>
@@ -169,10 +175,10 @@
                 <a-col :span="12">
                   <a-card data-setting-anchor="search_cookie" :title="pageText('pages.searchEnginesAndOpenSourceIntelligence')" size="small" class="page-config-card-fixed">
                     <a-form-item data-setting-anchor="github_token" :label="pageText('pages.githubTokenMonitoringTasks')" class="page-field-spacing">
-                      <a-input-password v-model:value="generalForm.github_token" :placeholder="pageText('pages.enterYourGithubPat')" />
+                      <a-input-password autocomplete="new-password" v-model:value="generalForm.github_token" :placeholder="pageText('pages.enterYourGithubPat')" />
                     </a-form-item>
                     <a-form-item :label="pageText('pages.360SearchCookieAntiBotAccess')" class="page-flush-bottom">
-                      <a-input-password v-model:value="generalForm.so_search_cookie" placeholder="so_search_cookie" />
+                      <a-input-password autocomplete="new-password" v-model:value="generalForm.so_search_cookie" placeholder="so_search_cookie" />
                     </a-form-item>
                   </a-card>
                 </a-col>
@@ -181,7 +187,7 @@
               <!-- 单独一行放必应，如果上面放不下 -->
               <a-card size="small" style="margin-bottom: 16px; border-radius: 6px;">
                  <a-form-item :label="pageText('pages.bingSearchCookieBingSearchCookie')" class="page-flush-bottom">
-                   <a-input-password v-model:value="generalForm.bing_search_cookie" :placeholder="pageText('pages.enterABingSearchCookie')" />
+                   <a-input-password autocomplete="new-password" v-model:value="generalForm.bing_search_cookie" :placeholder="pageText('pages.enterABingSearchCookie')" />
                  </a-form-item>
               </a-card>
 
@@ -427,7 +433,7 @@
             <!-- 手动输入新建 -->
             <a-tab-pane key="manual" :tab="pageText('pages.createFromText')">
               <div class="page-description">{{ pageText('pages.selectADictionaryCategoryAndEnterInitialContentThe') }}</div>
-              <a-form :label-wrap="true" layout="vertical">
+              <a-form autocomplete="off" :label-wrap="true" layout="vertical">
                 <a-form-item :label="pageText('pages.dictionaryCategories')" required>
                   <a-select v-model:value="createDictForm.prefix">
                     <a-select-option value="domain_">{{ pageText('pages.subdomainDiscoveryDomain') }}</a-select-option>
@@ -456,7 +462,7 @@
             <!-- 文件上传新建 -->
             <a-tab-pane key="upload" :tab="pageText('pages.createFromFile')">
               <div class="page-description">{{ pageText('pages.selectADictionaryCategoryAndUploadATxtFile') }}</div>
-              <a-form :label-wrap="true" layout="vertical">
+              <a-form autocomplete="off" :label-wrap="true" layout="vertical">
                 <a-form-item :label="pageText('pages.dictionaryCategories')" required>
                   <a-select v-model:value="createDictForm.prefix">
                     <a-select-option value="domain_">{{ pageText('pages.subdomainDiscoveryDomain') }}</a-select-option>
@@ -588,7 +594,7 @@
                 </div>
               </div>
               <a-spin :spinning="performanceLoading">
-                <a-form :label-wrap="true" layout="vertical">
+                <a-form autocomplete="off" :label-wrap="true" layout="vertical">
                   <!-- 语义分区说明：本页是「进程级队列并发」，与「高级扫描与环境」页的
                        「单任务内爆破线程数」是两套不同量级的指标，避免用户混淆调错 -->
                   <a-alert type="info" show-icon style="margin-bottom: 16px; border-radius: 6px;">
@@ -789,7 +795,7 @@
                 </a-button>
               </div>
               <a-spin :spinning="securityLoading">
-                <a-form :label-wrap="true" layout="vertical">
+                <a-form autocomplete="off" :label-wrap="true" layout="vertical">
                   <a-form-item data-setting-anchor="security" :label="pageText('pages.ipBlocklistSupportsCidrEG12700')">
                     <a-textarea v-model:value="securityForm.blackIpsText" :rows="8" :placeholder="pageText('pages.eG1270008100')" />
                   </a-form-item>
@@ -823,7 +829,7 @@
                 </a-button>
               </div>
               <a-spin :spinning="generalLoading">
-                <a-form :label-wrap="true" layout="vertical">
+                <a-form autocomplete="off" :label-wrap="true" layout="vertical">
                   <!-- 语义分区说明：本页的爆破并发度属于「单任务内」，与「任务队列并发」页的
                        进程数不是同一指标，避免用户跨页误填同量级数值 -->
                   <a-alert type="info" show-icon style="margin-bottom: 16px; border-radius: 6px;">
@@ -874,7 +880,7 @@
                     </a-col>
                     <a-col :span="12">
                       <a-form-item label="API Token (Swagger API Key)">
-                        <a-input-password v-model:value="generalForm.api_key" :placeholder="pageText('pages.apiKeyOnlyRequiredWhenApiAuthenticationIsEnabled')" />
+                        <a-input-password autocomplete="new-password" v-model:value="generalForm.api_key" :placeholder="pageText('pages.apiKeyOnlyRequiredWhenApiAuthenticationIsEnabled')" />
                       </a-form-item>
                     </a-col>
                   </a-row>
@@ -935,7 +941,7 @@
           </div>
 
           <a-spin :spinning="generalLoading">
-            <a-form :label-wrap="true" layout="vertical">
+            <a-form autocomplete="off" :label-wrap="true" layout="vertical">
               
               <!-- 1. 订阅消息类型 -->
               <a-card data-setting-anchor="push_options" :title="pageText('pages.subscribedEvents')" size="small" class="page-config-card-theme">
@@ -967,7 +973,7 @@
                       </a-col>
                       <a-col :span="12">
                         <a-form-item :label="pageText('pages.signingSecret')" class="page-flush-bottom">
-                          <a-input-password v-model:value="generalForm.dingding.secret" :placeholder="pageText('pages.dingtalkSecret')" size="small" />
+                          <a-input-password autocomplete="new-password" v-model:value="generalForm.dingding.secret" :placeholder="pageText('pages.dingtalkSecret')" size="small" />
                         </a-form-item>
                       </a-col>
                     </a-row>
@@ -984,7 +990,7 @@
                       <a-input v-model:value="generalForm.feishu.webhook_url" :placeholder="pageText('pages.feishuWebhookUrl')" size="small" />
                     </a-form-item>
                     <a-form-item :label="pageText('pages.signingSecret')" class="page-flush-bottom">
-                      <a-input-password v-model:value="generalForm.feishu.secret" :placeholder="pageText('pages.feishuSecret')" size="small" />
+                      <a-input-password autocomplete="new-password" v-model:value="generalForm.feishu.secret" :placeholder="pageText('pages.feishuSecret')" size="small" />
                     </a-form-item>
                   </a-card>
                 </a-col>
@@ -1064,7 +1070,7 @@
                       </a-col>
                       <a-col :span="12">
                         <a-form-item :label="pageText('pages.authorizationCodePassword')" class="page-form-spacing">
-                          <a-input-password v-model:value="generalForm.email.password" :placeholder="pageText('pages.authorizationPassword')" size="small" />
+                          <a-input-password autocomplete="new-password" v-model:value="generalForm.email.password" :placeholder="pageText('pages.authorizationPassword')" size="small" />
                         </a-form-item>
                       </a-col>
                       <a-col :span="24">
