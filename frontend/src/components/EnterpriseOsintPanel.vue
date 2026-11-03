@@ -718,6 +718,8 @@ const queryCounts = reactive({
   weibo: 0,
   kapp: 0,
   invest: 0,
+  zerozone_mapp: 0,
+  zerozone_wechat: 0,
 });
 
 const displayName = computed(() => {
@@ -922,8 +924,10 @@ const handleRefreshTask = async () => {
 const osintTabList = [
   { key: 'web', get label() { return assetText('tasks.websiteIcpRecords'); } },
   { key: 'app', get label() { return assetText('assets.mobileApps'); } },
-  { key: 'mapp', get label() { return assetText('tasks.wechatMiniPrograms'); } },
-  { key: 'wechat', get label() { return assetText('tasks.wechatOfficialAccounts'); } },
+  { key: 'mapp', get label() { return assetText('tasks.wechatMiniProgramsIcp'); } },
+  { key: 'zerozone_mapp', get label() { return assetText('tasks.wechatMiniPrograms'); } },
+  { key: 'zerozone_wechat', get label() { return assetText('tasks.wechatOfficialAccounts'); } },
+  { key: 'wechat', get label() { return assetText('tasks.wechatOfficialAccountsIcp'); } },
   { key: 'weibo', get label() { return assetText('tasks.corporateWeiboAccounts'); } },
   { key: 'kapp', get label() { return assetText('tasks.quickApps'); } },
   { key: 'invest', get label() { return assetText('tasks.investments'); } }
@@ -1147,6 +1151,8 @@ const fetchTaskDetail = async () => {
       queryCounts.weibo = stats.weibo_cnt || 0;
       queryCounts.kapp = stats.kapp_cnt || 0;
       queryCounts.invest = stats.invest_cnt || 0;
+      queryCounts.zerozone_mapp = stats.zerozone_mapp_cnt || 0;
+      queryCounts.zerozone_wechat = stats.zerozone_wechat_cnt || 0;
 
       if (task.status === 'done' || task.status === 'error') {
         stopLogPolling();

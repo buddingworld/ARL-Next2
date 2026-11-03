@@ -10,6 +10,19 @@ ns = Namespace('icp', description="ICP 备案查询")
 logger = get_logger()
 
 
+def _zerozone_key():
+    """全局 0.zone API KEY。
+
+    osint-service 是独立服务、不读主应用的 config.yaml，因此由这里随任务派发过去。
+    未配置时返回空串，osint-service 侧会给出明确的跳过提示。
+    """
+    try:
+        from app.config import Config
+        return str(getattr(Config, "ZEROZONE_KEY", "") or "").strip()
+    except Exception:
+        return ""
+
+
 def _request_recon(action, options):
     """只有微服务确认接收或停止后，调用方才报告成功。"""
     import requests
@@ -210,6 +223,10 @@ class IcpTask(ARLResource):
             official_company_name = matched_tyc.get("company_name") or target_str
             final_name = custom_name or (f"{official_company_name}全景测绘" if official_company_name else f"TYC_{gid}")
             full_query_type = ['invest', 'web', 'app', 'mapp', 'wechat', 'weibo']
+            # 自动升级为全景双轨时沿用上面的默认维度，但用户额外勾选的 0.zone 维度需保留
+            for _extra in (query_type or []):
+                if _extra in ('zerozone_mapp', 'zerozone_wechat') and _extra not in full_query_type:
+                    full_query_type.append(_extra)
 
             task_data = {
                 "name": final_name,
@@ -240,6 +257,7 @@ class IcpTask(ARLResource):
                 "invest_ratio": invest_ratio,
                 "query_type": full_query_type,
                 "enable_icp": enable_icp,
+                "zerozone_key": _zerozone_key(),
                 "company_name": official_company_name,
                 "name": final_name,
                 "type": "tyc",
@@ -279,6 +297,7 @@ class IcpTask(ARLResource):
             "task_id": task_id,
             "target": target_str,
             "query_type": final_query_type,
+            "zerozone_key": _zerozone_key(),
             "type": "icp"
         }
         try:
@@ -424,6 +443,7 @@ class TycTask(ARLResource):
             "invest_ratio": invest_ratio,
             "query_type": query_type,
             "enable_icp": bool(enable_icp),
+            "zerozone_key": _zerozone_key(),
             "company_name": official_company_name,
             "name": name
         }
@@ -810,6 +830,7 @@ def _restart_single_icp_task(task_id: str):
                 "invest_ratio": task.get("invest_ratio", 0),
                 "query_type": query_type,
                 "enable_icp": task.get("enable_icp", True),
+                "zerozone_key": _zerozone_key(),
                 "company_name": task.get("company_name") or "",
                 "name": task.get("name", ""),
                 "type": "tyc",
@@ -821,6 +842,7 @@ def _restart_single_icp_task(task_id: str):
                 "task_id": new_task_id,
                 "target": task.get("target"),
                 "query_type": query_type,
+                "zerozone_key": _zerozone_key(),
                 "type": "icp"
             }
 

@@ -763,5 +763,12 @@ export default {
   "dnsPluginPresetAll": "全部开启",
   "dnsPluginPresetNone": "全部关闭",
   "dnsPluginMenuHint": "勾选本次任务要使用的插件；「默认」会选中所有标记为默认生效的插件",
-  "dnsPluginNoneEnabled": "当前没有全局启用的域名收集插件，请先到系统设置中开启"
+  "dnsPluginNoneEnabled": "当前没有全局启用的域名收集插件，请先到系统设置中开启",
+
+  // ==================== Enterprise recon dimensions ====================
+  "wechatMiniProgramsIcp": "微信小程序(ICP备案)",
+  "wechatOfficialAccountsIcp": "微信公众号(ICP备案)",
+  "miniProgramsIcpCount": "小程序(ICP备案) - {count}",
+  "miniProgramsZerozoneCount": "小程序(0.zone) - {count}",
+  "officialAccountsZerozoneCount": "公众号(0.zone) - {count}"
 };

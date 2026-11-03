@@ -763,5 +763,12 @@ export default {
   "dnsPluginPresetAll": "Включить все",
   "dnsPluginPresetNone": "Отключить все",
   "dnsPluginMenuHint": "Выберите плагины для этой задачи. «По умолчанию» отмечает все плагины, активные по умолчанию.",
-  "dnsPluginNoneEnabled": "Ни один плагин сбора доменов не включён глобально. Сначала включите его в настройках системы."
+  "dnsPluginNoneEnabled": "Ни один плагин сбора доменов не включён глобально. Сначала включите его в настройках системы.",
+
+  // ==================== Enterprise recon dimensions ====================
+  "wechatMiniProgramsIcp": "Мини-программы WeChat (ICP)",
+  "wechatOfficialAccountsIcp": "Официальные аккаунты WeChat (ICP)",
+  "miniProgramsIcpCount": "Мини-программы (ICP) - {count}",
+  "miniProgramsZerozoneCount": "Мини-программы (0.zone) - {count}",
+  "officialAccountsZerozoneCount": "Официальные аккаунты (0.zone) - {count}"
 };

@@ -159,8 +159,9 @@
               <a-checkbox value="invest">{{ taskText('tasks.investments') }}</a-checkbox>
               <a-checkbox value="web">{{ taskText('tasks.websiteIcpRecords') }}</a-checkbox>
               <a-checkbox value="app">{{ taskText('tasks.mobileApps') }}</a-checkbox>
-              <a-checkbox value="mapp">{{ taskText('tasks.wechatMiniPrograms') }}</a-checkbox>
-              <a-checkbox value="wechat">{{ taskText('tasks.wechatOfficialAccounts') }}</a-checkbox>
+              <a-checkbox value="mapp">{{ taskText('tasks.wechatMiniProgramsIcp') }}</a-checkbox>
+              <a-checkbox value="zerozone_mapp">{{ taskText('tasks.wechatMiniPrograms') }}</a-checkbox>
+              <a-checkbox value="zerozone_wechat">{{ taskText('tasks.wechatOfficialAccounts') }}</a-checkbox>
               <a-checkbox value="weibo">{{ taskText('tasks.corporateWeiboAccounts') }}</a-checkbox>
             </a-checkbox-group>
           </a-form-item>
@@ -207,7 +208,8 @@ const formState = reactive({
   rawTarget: '',
   depth: 1,
   invest_ratio: 50,
-  query_type: ['invest', 'web', 'app', 'mapp', 'wechat', 'weibo'],
+  // 0.zone 维度按次消耗接口额度，默认不勾选
+  query_type: ['invest', 'web', 'app', 'mapp', 'weibo'],
   enable_icp: true
 });
 

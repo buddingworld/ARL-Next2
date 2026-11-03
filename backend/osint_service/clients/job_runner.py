@@ -5,6 +5,7 @@ from datetime import datetime, timezone, timedelta
 from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
 from .tyc_async import AsyncTycClient
+from .zerozone_client import ZeroZoneClient, TYPE_MP, TYPE_OA
 import re
 import random
 
@@ -222,7 +223,8 @@ async def run_icp_job(options):
         "kapp": myicp.ymKuaiApp,
     }
     
-    counts = {"web": 0, "app": 0, "mapp": 0, "kapp": 0}
+    counts = {"web": 0, "app": 0, "mapp": 0, "kapp": 0,
+              "zerozone_mapp": 0, "zerozone_wechat": 0}
     
     async def insert_syslog(level, title, message):
         log_doc = {
@@ -243,7 +245,9 @@ async def run_icp_job(options):
             "web_cnt": counts.get("web", 0),
             "app_cnt": counts.get("app", 0),
             "mapp_cnt": counts.get("mapp", 0),
-            "kapp_cnt": counts.get("kapp", 0)
+            "kapp_cnt": counts.get("kapp", 0),
+            "zerozone_mapp_cnt": counts.get("zerozone_mapp", 0),
+            "zerozone_wechat_cnt": counts.get("zerozone_wechat", 0)
         }}})
 
     sys_proxy = await _resolve_system_proxy(options)
@@ -307,6 +311,33 @@ async def run_icp_job(options):
                 logger.error(f"ICP Query exception for {qt}: {e}")
                 error_msg.append(f"{qt} error: {str(e)}")
                 await insert_syslog("error", f"{qt}查询", f"执行过程发生异常: {str(e)}")
+
+        elif qt in ("zerozone_mapp", "zerozone_wechat"):
+            # 0.zone 维度：按企业全称查询，不依赖工信部备案链路
+            try:
+                label = TYPE_MP if qt == "zerozone_mapp" else TYPE_OA
+                name_cn = "微信小程序" if qt == "zerozone_mapp" else "微信公众号"
+                await insert_syslog("info", f"{qt}查询",
+                                    f"正在通过 0.zone 查询{name_cn}（主体: {target}）...")
+                zz_client = ZeroZoneClient(options.get("zerozone_key"), proxy=sys_proxy)
+                items = await zz_client.query(label, target)
+                if items:
+                    assets = []
+                    for item in items:
+                        asset = _normalize_zerozone_asset(item, qt, company_name=target)
+                        asset["task_id"] = task_id
+                        asset["query_type"] = qt
+                        asset["source"] = "zerozone"
+                        assets.append(asset)
+                    await db['icp_asset'].insert_many(assets, ordered=False)
+                total_assets += len(items)
+                counts[qt] = counts.get(qt, 0) + len(items)
+                await update_stats()
+                await insert_syslog("info", f"{qt}查询", f"获取完成，共计 {len(items)} 条资产")
+            except Exception as e:
+                logger.error(f"0.zone Query exception for {qt}: {e}")
+                error_msg.append(f"{qt} error: {str(e)}")
+                await insert_syslog("error", f"{qt}查询", f"0.zone 查询异常: {str(e)}")
         
     # 终态判定口径（与 TYC 任务保持一致）：
     # 只要成功抓取到资产即视为完成，确保前端【同步】资产组按钮畅通；
@@ -321,7 +352,9 @@ async def run_icp_job(options):
                 "web_cnt": counts["web"],
                 "app_cnt": counts["app"],
                 "mapp_cnt": counts["mapp"],
-                "kapp_cnt": counts["kapp"]
+                "kapp_cnt": counts["kapp"],
+                "zerozone_mapp_cnt": counts.get("zerozone_mapp", 0),
+                "zerozone_wechat_cnt": counts.get("zerozone_wechat", 0)
             }
         }
     }
@@ -380,6 +413,44 @@ def _normalize_tyc_asset(item, query_type, company_name=None):
     if company_name and not item.get('companyName'):
         item['companyName'] = company_name
     return item
+
+
+def _normalize_zerozone_asset(item, query_type, company_name=None):
+    """把 0.zone 记录规整成与现有资产一致的字段，便于复用同一套展示列。
+
+    0.zone 原始记录形如：
+        {"title": 名称, "type": 微信小程序/微信公众号, "group": 企业全称,
+         "company": 企业全称, "msg": {详情}, "timestamp": 时间}
+    这里把 msg 里的字段平铺出来，并统一 name / unitName / icon 等别名。
+    """
+    if not isinstance(item, dict):
+        return item
+
+    msg = item.get("msg")
+    if not isinstance(msg, dict):
+        msg = {}
+
+    asset = dict(item)
+    asset.pop("_id", None)
+    asset.pop("msg", None)
+
+    asset["name"] = str(item.get("title") or "").strip()
+    asset["unitName"] = str(item.get("group") or item.get("company") or company_name or "").strip()
+    asset["icon"] = msg.get("iconUrl") or msg.get("icon") or ""
+    asset["recordType"] = item.get("type") or ""
+    asset["updateRecordTime"] = item.get("timestamp") or ""
+
+    if query_type == "zerozone_wechat":
+        asset["wechatId"] = msg.get("wechat_id") or msg.get("wechatId") or ""
+        asset["brief"] = msg.get("signature") or msg.get("brief") or ""
+    else:
+        # 小程序：复用 serviceName 别名，与 ICP 小程序列的取值口径保持一致
+        asset["serviceName"] = asset["name"]
+        asset["appId"] = msg.get("app_id") or msg.get("appId") or ""
+
+    if company_name and not asset.get("companyName"):
+        asset["companyName"] = company_name
+    return asset
 
 
 async def _upsert_task_asset(task_id, query_type, asset, company_name, task_assets_index, source="tyc"):
@@ -475,6 +546,25 @@ async def _upsert_task_asset(task_id, query_type, asset, company_name, task_asse
 
     elif query_type == "invest":
         key = str(asset.get("id") or asset.get("name") or "").strip().lower()
+        if not key:
+            return False
+
+    elif query_type == "zerozone_wechat":
+        # 与 ICP 公众号一致：优先名称，其次微信号
+        raw_name = (asset.get("name") or asset.get("title") or "").strip()
+        wid = (asset.get("wechatId") or "").strip()
+        if raw_name:
+            key = raw_name.lower()
+        elif wid:
+            key = wid.lower()
+        if not key:
+            return False
+
+    elif query_type == "zerozone_mapp":
+        # 与 ICP 小程序一致：优先名称
+        raw_name = (asset.get("name") or asset.get("serviceName") or "").strip()
+        if raw_name:
+            key = raw_name.lower()
         if not key:
             return False
 
@@ -663,6 +753,55 @@ async def _run_company_icp_enrichment(task_id, company_name, myicp, task_assets_
                 await insert_syslog("warning", "工信部查重", f"主体【{company_name}】工信部 {label} 查询异常 ({err_msg})，已平滑降级跳过")
 
 
+async def _run_zerozone_queries(task_id, company_name, query_types, zerozone_key, sys_proxy,
+                                task_assets_index, counts, total_assets_holder,
+                                insert_syslog, update_stats, log_prefix=""):
+    """按企业全称从 0.zone 拉取微信小程序 / 微信公众号资产。
+
+    两个作业（ICP 与 TYC）共用：0.zone 只依赖企业全称，与备案/天眼查链路无关。
+    """
+    targets = [t for t in ("zerozone_mapp", "zerozone_wechat") if t in query_types]
+    if not targets:
+        return
+
+    if not (company_name or "").strip():
+        await insert_syslog("warning", "0.zone查询", f"{log_prefix}未能获取企业全称，跳过 0.zone 查询")
+        return
+
+    zz_client = ZeroZoneClient(zerozone_key, proxy=sys_proxy)
+
+    for qt in targets:
+        label = TYPE_MP if qt == "zerozone_mapp" else TYPE_OA
+        name_cn = "微信小程序" if qt == "zerozone_mapp" else "微信公众号"
+        await insert_syslog("info", "0.zone查询",
+                            f"{log_prefix}正在通过 0.zone 查询{name_cn}（主体: {company_name}）...")
+
+        items = await zz_client.query(label, company_name)
+        if not items:
+            await insert_syslog("info", "0.zone查询", f"{log_prefix}{name_cn}未查询到记录")
+            continue
+
+        new_cnt = 0
+        merged_cnt = 0
+        for item in items:
+            asset = _normalize_zerozone_asset(item, qt, company_name=company_name)
+            is_new = await _upsert_task_asset(task_id, qt, asset, company_name,
+                                              task_assets_index, source="zerozone")
+            if is_new:
+                new_cnt += 1
+            else:
+                merged_cnt += 1
+
+        counts[qt] = counts.get(qt, 0) + new_cnt
+        total_assets_holder[0] += new_cnt
+        await update_stats()
+
+        tip = f"新增 {new_cnt} 条记录"
+        if merged_cnt:
+            tip += f"，同名去重合并 {merged_cnt} 条"
+        await insert_syslog("info", "0.zone查询", f"{log_prefix}{name_cn}查询完成，{tip}")
+
+
 async def run_tyc_job(options):
     task_id = options.get("task_id")
     gid = options.get("gid")
@@ -683,7 +822,8 @@ async def run_tyc_job(options):
         return
     total_assets_holder = [0]
     error_msg = []
-    counts = {"web": 0, "app": 0, "mapp": 0, "wechat": 0, "weibo": 0, "invest": 0, "kapp": 0}
+    counts = {"web": 0, "app": 0, "mapp": 0, "wechat": 0, "weibo": 0, "invest": 0, "kapp": 0,
+              "zerozone_mapp": 0, "zerozone_wechat": 0}
 
     myicp = None
     icp_init_error = ""
@@ -722,7 +862,9 @@ async def run_tyc_job(options):
             "mapp_cnt": counts.get("mapp", 0),
             "wechat_cnt": counts.get("wechat", 0),
             "weibo_cnt": counts.get("weibo", 0),
-            "kapp_cnt": counts.get("kapp", 0)
+            "kapp_cnt": counts.get("kapp", 0),
+            "zerozone_mapp_cnt": counts.get("zerozone_mapp", 0),
+            "zerozone_wechat_cnt": counts.get("zerozone_wechat", 0)
         }}})
 
     task_assets_index = {
@@ -732,7 +874,9 @@ async def run_tyc_job(options):
         "wechat": {},
         "weibo": {},
         "kapp": {},
-        "invest": {}
+        "invest": {},
+        "zerozone_mapp": {},
+        "zerozone_wechat": {}
     }
     gid_to_name = {}
     root_company_name = ""
@@ -779,9 +923,11 @@ async def run_tyc_job(options):
         "invest": "对外投资",
         "web": "备案网站",
         "app": "APP",
-        "mapp": "小程序",
-        "wechat": "微信公众号",
-        "weibo": "微博"
+        "mapp": "小程序(ICP备案)",
+        "wechat": "微信公众号(ICP备案)",
+        "weibo": "微博",
+        "zerozone_mapp": "小程序(0.zone)",
+        "zerozone_wechat": "微信公众号(0.zone)"
     }
     modules_str = ",".join([type_map.get(qt, qt) for qt in query_types])
     ratio_str = f"{invest_ratio}%" if invest_ratio and float(invest_ratio) > 0 else "无限制"
@@ -1058,6 +1204,22 @@ async def run_tyc_job(options):
                         logger.error(f"TYC Query exception for mapp: {e}")
                         error_msg.append(f"mapp error: {str(e)}")
                         await insert_syslog("error", "小程序查询", f"目标 {current_gid} 小程序查询异常: {str(e)}")
+
+                # 0.zone：微信小程序 / 微信公众号（按企业全称查，与备案/天眼查链路无关）
+                if any(t in query_types for t in ("zerozone_mapp", "zerozone_wechat")):
+                    await asyncio.sleep(random.uniform(1.0, 3.0))
+                    try:
+                        await _run_zerozone_queries(
+                            task_id, current_company_name, query_types,
+                            options.get("zerozone_key"), sys_proxy,
+                            task_assets_index, counts, total_assets_holder,
+                            insert_syslog, update_stats
+                        )
+                    except Exception as e:
+                        logger.error(f"0.zone query exception for {current_company_name}: {e}")
+                        error_msg.append(f"zerozone error: {str(e)}")
+                        await insert_syslog("error", "0.zone查询",
+                                            f"目标 {current_gid} 0.zone 查询异常: {str(e)}")
 
                 # 工信部官方备案双轨查重与补全 (针对当前企业实体)
                 if enable_icp and myicp:

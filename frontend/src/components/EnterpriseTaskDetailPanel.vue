@@ -51,7 +51,9 @@
       <a-tabs v-model:activeKey="activeTab" type="card" class="arl-detail-tabs" :style="activeTab === 'log' ? 'margin-bottom: 0;' : 'margin-bottom: 16px;'" @change="onTabChange">
         <a-tab-pane key="web" :tab="taskText('tasks.websiteIcpRecordsCount', { count: queryCounts.web })"></a-tab-pane>
         <a-tab-pane key="app" :tab="`APP - ${queryCounts.app}`"></a-tab-pane>
-        <a-tab-pane key="mapp" :tab="taskText('tasks.miniProgramsCount', { count: queryCounts.mapp })"></a-tab-pane>
+        <a-tab-pane key="mapp" :tab="taskText('tasks.miniProgramsIcpCount', { count: queryCounts.mapp })"></a-tab-pane>
+        <a-tab-pane key="zerozone_mapp" :tab="taskText('tasks.miniProgramsZerozoneCount', { count: queryCounts.zerozone_mapp })"></a-tab-pane>
+        <a-tab-pane key="zerozone_wechat" :tab="taskText('tasks.officialAccountsZerozoneCount', { count: queryCounts.zerozone_wechat })"></a-tab-pane>
         <a-tab-pane v-if="taskType === 'tyc'" key="wechat" :tab="taskText('tasks.officialAccountsCount', { count: queryCounts.wechat })"></a-tab-pane>
         <a-tab-pane v-if="taskType === 'tyc'" key="weibo" :tab="taskText('tasks.weiboAccountsCount', { count: queryCounts.weibo })"></a-tab-pane>
         <a-tab-pane key="kapp" :tab="taskText('tasks.quickAppsCount', { count: queryCounts.kapp })"></a-tab-pane>
@@ -281,12 +283,12 @@ const { stickyConfig } = useSticky(actionBarRef);
 
 const getAvailableTabs = (type = taskType.value) => {
   if (type === 'icp') {
-    return ['web', 'app', 'mapp', 'kapp', 'log'];
+    return ['web', 'app', 'mapp', 'zerozone_mapp', 'zerozone_wechat', 'kapp', 'log'];
   }
-  return ['web', 'app', 'mapp', 'wechat', 'weibo', 'kapp', 'invest', 'log'];
+  return ['web', 'app', 'mapp', 'zerozone_mapp', 'zerozone_wechat', 'wechat', 'weibo', 'kapp', 'invest', 'log'];
 };
 
-const validTabs = ['web', 'app', 'mapp', 'kapp', 'invest', 'wechat', 'weibo', 'log'];
+const validTabs = ['web', 'app', 'mapp', 'zerozone_mapp', 'zerozone_wechat', 'kapp', 'invest', 'wechat', 'weibo', 'log'];
 const activeTab = ref(route.query?.tab && validTabs.includes(route.query.tab) ? route.query.tab : 'web');
 const queryCounts = reactive({
   web: 0,
@@ -296,6 +298,8 @@ const queryCounts = reactive({
   invest: 0,
   wechat: 0,
   weibo: 0,
+  zerozone_mapp: 0,
+  zerozone_wechat: 0,
 });
 
 const syncEnterpriseQueryCounts = (q = route.query) => {
@@ -306,6 +310,8 @@ const syncEnterpriseQueryCounts = (q = route.query) => {
   queryCounts.invest = Number(q?.invest_cnt) || 0;
   queryCounts.wechat = Number(q?.wechat_cnt) || 0;
   queryCounts.weibo = Number(q?.weibo_cnt) || 0;
+  queryCounts.zerozone_mapp = Number(q?.zerozone_mapp_cnt) || 0;
+  queryCounts.zerozone_wechat = Number(q?.zerozone_wechat_cnt) || 0;
 };
 syncEnterpriseQueryCounts();
 
@@ -436,8 +442,11 @@ const dynamicColumns = computed(() => {
   let cols = [];
   if (activeTab.value === 'invest') cols = investColumns;
   else if (activeTab.value === 'wechat') cols = wechatColumns;
+  // 0.zone 维度复用现有列定义（后端已把记录规整为同一套字段）
+  else if (activeTab.value === 'zerozone_wechat') cols = wechatColumns;
   else if (activeTab.value === 'weibo') cols = weiboColumns;
   else if (activeTab.value === 'kapp') cols = kappColumns;
+  else if (activeTab.value === 'zerozone_mapp') cols = mappColumns;
   else if (isTyc) {
     if (activeTab.value === 'web') cols = webColumns;
     else if (activeTab.value === 'mapp') cols = mappColumns;
@@ -675,6 +684,8 @@ const fetchTaskStatistic = async () => {
       queryCounts.invest = stat.invest_cnt !== undefined ? stat.invest_cnt : queryCounts.invest;
       queryCounts.wechat = stat.wechat_cnt !== undefined ? stat.wechat_cnt : queryCounts.wechat;
       queryCounts.weibo = stat.weibo_cnt !== undefined ? stat.weibo_cnt : queryCounts.weibo;
+      queryCounts.zerozone_mapp = stat.zerozone_mapp_cnt !== undefined ? stat.zerozone_mapp_cnt : queryCounts.zerozone_mapp;
+      queryCounts.zerozone_wechat = stat.zerozone_wechat_cnt !== undefined ? stat.zerozone_wechat_cnt : queryCounts.zerozone_wechat;
 
       const currentStatus = taskData.status;
       if (['done', 'error', 'stop'].includes(currentStatus)) {

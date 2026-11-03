@@ -763,5 +763,12 @@ export default {
   "dnsPluginPresetAll": "Select all",
   "dnsPluginPresetNone": "Clear all",
   "dnsPluginMenuHint": "Pick the plugins to use for this task. \"Default\" selects every plugin marked as active by default.",
-  "dnsPluginNoneEnabled": "No domain-collection plugin is enabled globally. Enable one in system settings first."
+  "dnsPluginNoneEnabled": "No domain-collection plugin is enabled globally. Enable one in system settings first.",
+
+  // ==================== Enterprise recon dimensions ====================
+  "wechatMiniProgramsIcp": "WeChat Mini Programs (ICP)",
+  "wechatOfficialAccountsIcp": "WeChat Official Accounts (ICP)",
+  "miniProgramsIcpCount": "Mini Programs (ICP) - {count}",
+  "miniProgramsZerozoneCount": "Mini Programs (0.zone) - {count}",
+  "officialAccountsZerozoneCount": "Official Accounts (0.zone) - {count}"
 };
