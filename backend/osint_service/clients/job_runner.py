@@ -416,12 +416,17 @@ def _normalize_tyc_asset(item, query_type, company_name=None):
 
 
 def _normalize_zerozone_asset(item, query_type, company_name=None):
-    """把 0.zone 记录规整成与现有资产一致的字段，便于复用同一套展示列。
+    """把 0.zone 记录规整成结构化字段，供列表直接展示。
 
-    0.zone 原始记录形如：
-        {"title": 名称, "type": 微信小程序/微信公众号, "group": 企业全称,
-         "company": 企业全称, "msg": {详情}, "timestamp": 时间}
-    这里把 msg 里的字段平铺出来，并统一 name / unitName / icon 等别名。
+    0.zone 原始记录（apk 模块，小程序 / 公众号 / APK 三类共用同一结构）：
+        {"title": 名称, "type": 类型, "group"/"company": 所属公司,
+         "icp": 备案号（仅小程序）, "check_time": 检测时间,
+         "timestamp": 入库时间, "timestamp_update": 更新时间, "msg": {类型相关详情}}
+    msg 字段随类型不同（已用真实接口核对）：
+        小程序: app_id / wechat_id / iconUrl / main_page
+        公众号: wechat_id / wechat_fakeid / service_type / introduction / iconUrl / code(二维码)
+        APK:    app_id / app_url(下载地址) / introduction / iconUrl
+    缺失的字段一律留空，前端按类型展示对应列，不会因为某类没有该字段而报错。
     """
     if not isinstance(item, dict):
         return item
@@ -434,19 +439,30 @@ def _normalize_zerozone_asset(item, query_type, company_name=None):
     asset.pop("_id", None)
     asset.pop("msg", None)
 
-    asset["name"] = str(item.get("title") or "").strip()
-    asset["unitName"] = str(item.get("group") or item.get("company") or company_name or "").strip()
-    asset["icon"] = msg.get("iconUrl") or msg.get("icon") or ""
-    asset["recordType"] = item.get("type") or ""
-    asset["updateRecordTime"] = item.get("timestamp") or ""
+    # ---- 主要展示列 ----
+    asset["name"] = str(item.get("title") or "").strip()                 # 名称
+    asset["unitName"] = str(item.get("group") or item.get("company")
+                             or company_name or "").strip()              # 所属公司
+    asset["downloadUrl"] = msg.get("app_url") or ""                      # APK 下载地址
+    asset["wechatId"] = msg.get("wechat_id") or ""                       # 微信号 / 小程序原始ID
+    asset["appId"] = msg.get("app_id") or ""                             # AppID
+    asset["recordType"] = item.get("type") or ""                         # 类型
+    asset["introduction"] = msg.get("introduction") or ""                # 应用说明
+    asset["recordTime"] = item.get("timestamp") or ""                    # 入库时间
+    asset["icp"] = item.get("icp") or ""                                 # 备案号（小程序）
 
-    if query_type == "zerozone_wechat":
-        asset["wechatId"] = msg.get("wechat_id") or msg.get("wechatId") or ""
-        asset["brief"] = msg.get("signature") or msg.get("brief") or ""
-    else:
-        # 小程序：复用 serviceName 别名，与 ICP 小程序列的取值口径保持一致
+    # ---- 其余有参考价值的信息 ----
+    asset["icon"] = msg.get("iconUrl") or msg.get("icon") or ""
+    asset["mainPage"] = msg.get("main_page") or ""                       # 小程序首页路径
+    asset["serviceType"] = msg.get("service_type") or ""                 # 公众号服务类型
+    asset["qrCode"] = msg.get("code") or ""                              # 公众号二维码链接
+    asset["wechatFakeid"] = msg.get("wechat_fakeid") or ""
+    asset["checkTime"] = item.get("check_time") or ""
+    asset["updateRecordTime"] = item.get("timestamp_update") or item.get("timestamp") or ""
+
+    # 小程序侧复用 serviceName 别名，与 ICP 小程序的取值口径保持一致
+    if query_type == "zerozone_mapp":
         asset["serviceName"] = asset["name"]
-        asset["appId"] = msg.get("app_id") or msg.get("appId") or ""
 
     if company_name and not asset.get("companyName"):
         asset["companyName"] = company_name

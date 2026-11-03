@@ -396,6 +396,33 @@ const wechatColumns = [
   { get title() { return taskText('tasks.details'); }, key: 'raw', width: 80 }
 ];
 
+// 0.zone 小程序：字段来自 apk 模块 type=="微信小程序" 的记录
+// 小程序记录没有 app_url（下载地址），该列只在 APK 类型下才有值，故不在此展示
+const zerozoneMappColumns = [
+  { get title() { return taskText('tasks.miniProgramName'); }, dataIndex: 'name', key: 'name', width: 200 },
+  { get title() { return taskText('tasks.companyName'); }, dataIndex: 'unitName', key: 'unitName', width: 220 },
+  { get title() { return taskText('tasks.miniProgramOriginalId'); }, dataIndex: 'wechatId', key: 'wechatId', width: 170 },
+  { get title() { return taskText('tasks.appId'); }, dataIndex: 'appId', key: 'appId', width: 190 },
+  { get title() { return taskText('tasks.icpNumber'); }, dataIndex: 'icp', key: 'icp', width: 190 },
+  { get title() { return taskText('tasks.miniProgramHomePage'); }, dataIndex: 'mainPage', key: 'mainPage', width: 160 },
+  { get title() { return taskText('tasks.recordType'); }, dataIndex: 'recordType', key: 'recordType', width: 110 },
+  { get title() { return taskText('tasks.recordTime'); }, dataIndex: 'recordTime', key: 'recordTime', width: 170 },
+  { get title() { return taskText('tasks.details'); }, key: 'raw', width: 80 }
+];
+
+// 0.zone 公众号：字段来自 apk 模块 type=="微信公众号" 的记录
+// 不展示 service_type：0.zone 返回的是 0/1/2 数字码且未公开编码含义，
+// 直接展示无意义、猜测映射又可能误导，原始值保留在「详情」列中可查
+const zerozoneWechatColumns = [
+  { get title() { return taskText('tasks.officialAccountName'); }, dataIndex: 'name', key: 'name', width: 200 },
+  { get title() { return taskText('tasks.companyName'); }, dataIndex: 'unitName', key: 'unitName', width: 220 },
+  { get title() { return taskText('tasks.wechatId'); }, dataIndex: 'wechatId', key: 'wechatId', width: 170 },
+  { get title() { return taskText('tasks.description'); }, dataIndex: 'introduction', key: 'introduction', width: 300, ellipsis: true },
+  { get title() { return taskText('tasks.recordType'); }, dataIndex: 'recordType', key: 'recordType', width: 110 },
+  { get title() { return taskText('tasks.recordTime'); }, dataIndex: 'recordTime', key: 'recordTime', width: 170 },
+  { get title() { return taskText('tasks.details'); }, key: 'raw', width: 80 }
+];
+
 const weiboColumns = [
   { get title() { return taskText('tasks.weiboAccountName'); }, dataIndex: 'name', key: 'name', width: 200 },
   { get title() { return taskText('tasks.weiboUrl'); }, dataIndex: 'href', key: 'href', width: 250 },
@@ -442,11 +469,11 @@ const dynamicColumns = computed(() => {
   let cols = [];
   if (activeTab.value === 'invest') cols = investColumns;
   else if (activeTab.value === 'wechat') cols = wechatColumns;
-  // 0.zone 维度复用现有列定义（后端已把记录规整为同一套字段）
-  else if (activeTab.value === 'zerozone_wechat') cols = wechatColumns;
+  // 0.zone 维度使用专用列（字段与 ICP 数据源不同，不能复用其列定义）
+  else if (activeTab.value === 'zerozone_wechat') cols = zerozoneWechatColumns;
   else if (activeTab.value === 'weibo') cols = weiboColumns;
   else if (activeTab.value === 'kapp') cols = kappColumns;
-  else if (activeTab.value === 'zerozone_mapp') cols = mappColumns;
+  else if (activeTab.value === 'zerozone_mapp') cols = zerozoneMappColumns;
   else if (isTyc) {
     if (activeTab.value === 'web') cols = webColumns;
     else if (activeTab.value === 'mapp') cols = mappColumns;

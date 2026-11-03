@@ -770,5 +770,14 @@ export default {
   "wechatOfficialAccountsIcp": "微信公众号(ICP备案)",
   "miniProgramsIcpCount": "小程序(ICP备案) - {count}",
   "miniProgramsZerozoneCount": "小程序(0.zone) - {count}",
-  "officialAccountsZerozoneCount": "公众号(0.zone) - {count}"
+  "officialAccountsZerozoneCount": "公众号(0.zone) - {count}",
+
+  // ==================== 0.zone detail columns ====================
+  "companyName": "所属公司",
+  "miniProgramOriginalId": "小程序原始ID",
+  "appId": "AppID",
+  "miniProgramHomePage": "首页路径",
+  "serviceType": "服务类型",
+  "recordTime": "入库时间",
+  "recordType": "类型"
 };

@@ -770,5 +770,14 @@ export default {
   "wechatOfficialAccountsIcp": "WeChat Official Accounts (ICP)",
   "miniProgramsIcpCount": "Mini Programs (ICP) - {count}",
   "miniProgramsZerozoneCount": "Mini Programs (0.zone) - {count}",
-  "officialAccountsZerozoneCount": "Official Accounts (0.zone) - {count}"
+  "officialAccountsZerozoneCount": "Official Accounts (0.zone) - {count}",
+
+  // ==================== 0.zone detail columns ====================
+  "companyName": "Company",
+  "miniProgramOriginalId": "Mini Program Original ID",
+  "appId": "AppID",
+  "miniProgramHomePage": "Home Page",
+  "serviceType": "Service Type",
+  "recordTime": "Recorded At",
+  "recordType": "Type"
 };
