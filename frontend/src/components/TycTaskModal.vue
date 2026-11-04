@@ -176,7 +176,7 @@ import { useI18n } from 'vue-i18n';
 
 import { ref, reactive, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { Modal, message } from 'ant-design-vue';
+import { message } from 'ant-design-vue';
 import {
   LinkOutlined,
   BankOutlined
@@ -317,40 +317,8 @@ const handleSubmit = async () => {
     // 分流场景 1: 输入了天眼查 GID / 链接
     if (parsed.gid) {
       if (!tycConfigValid.value) {
-        if (tycErrorType.value === 'banned_location') {
-          Modal.confirm({
-            title: taskText('tasks.tianyanchaLocationRestrictedTitle'),
-            content: taskText('tasks.tianyanchaLocationRestrictedContent'),
-            okText: taskText('tasks.configureSystemProxy'),
-            cancelText: taskText('tasks.stayOnThisPage'),
-            onOk() {
-              goToProxyConfig();
-            }
-          });
-          return;
-        }
-        if (tycConfigured.value && tycErrorMsg.value) {
-          Modal.confirm({
-            title: taskText('tasks.tianyanchaCredentialCheckFailedTitle'),
-            content: tycErrorMsg.value,
-            okText: taskText('tasks.configureCredentials'),
-            cancelText: taskText('tasks.stayOnThisPage'),
-            onOk() {
-              goToApiConfig();
-            }
-          });
-          return;
-        }
-        Modal.confirm({
-          title: taskText('tasks.tianyanchaCommercialCredentialsAreNotConfigured'),
-          content: taskText('tasks.investmentTraversalForATianyanchaGidRequiresCommercial'),
-          okText: taskText('tasks.configureCredentials'),
-          cancelText: taskText('tasks.stayOnThisPage'),
-          onOk() {
-            goToApiConfig();
-          }
-        });
-        return;
+        // 天眼查不可用不再拦截提交：后端会自动降级为小程序端兜底接口（仅对外投资穿透）
+        message.warning(taskText('tasks.tycUnavailableUsingFallback'));
       }
 
       submitLoading.value = true;

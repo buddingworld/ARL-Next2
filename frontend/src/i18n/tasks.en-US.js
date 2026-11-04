@@ -738,7 +738,7 @@ export default {
   "statusScheduled": "Scheduled",
   "paginationSummary": "Pages: {pages} / Records: {total}",
   "enterpriseReadyHint": "Ready for combined Tianyancha investment traversal and official MIIT ICP discovery. Enter a Tianyancha URL, ID, or the full registered company name.",
-  "enterpriseIcpHint": "Tianyancha API is not configured. Assets will be discovered from official MIIT ICP records. Configure credentials first to enable investment traversal.",
+  "enterpriseIcpHint": "Tianyancha API is not configured or its credentials have expired: assets will be retrieved via the official MIIT filing records, with the mini-program API as a fallback. The fallback only covers outbound investment traversal and may hit rate limits or return incomplete data — configuring official credentials is recommended.",
   "investmentDepthHint": "Depth: {depth}. Recursive company queries increase API usage. Check your query allowance.",
   "syncDescription": "This saves the selected domains to the target asset group for asset tracking. Scan tasks are created only when immediate discovery is enabled and a policy is selected.",
   "domainSummary": "Website domains in this task: {count}.",
@@ -779,5 +779,8 @@ export default {
   "miniProgramHomePage": "Home Page",
   "serviceType": "Service Type",
   "recordTime": "Recorded At",
-  "recordType": "Type"
+  "recordType": "Type",
+
+  // ==================== Tianyancha fallback ====================
+  "tycUnavailableUsingFallback": "Tianyancha credentials are unavailable; falling back to the mini-program API (outbound investment traversal only, and it may hit rate limits or return incomplete data)."
 };

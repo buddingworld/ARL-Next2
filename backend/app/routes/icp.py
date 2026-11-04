@@ -23,6 +23,24 @@ def _zerozone_key():
         return ""
 
 
+def _tyc_mini_search(word):
+    """兜底：天眼查小程序端接口按公司名解析企业 GID。
+
+    官方 API 未配置或失效时使用；任何异常都返回 None，由调用方降级处理。
+    """
+    word = (word or "").strip()
+    if not word:
+        return None
+    try:
+        from app.services.tycMiniClient import TycMiniClient
+        from app.config import Config
+        proxy = str(getattr(Config, "PROXY_URL", "") or "").strip()
+        return TycMiniClient(proxy=proxy).search_company(word)
+    except Exception as e:
+        logger.warning(f"TYC mini search failed for {word}: {e}")
+        return None
+
+
 def _request_recon(action, options):
     """只有微服务确认接收或停止后，调用方才报告成功。"""
     import requests
@@ -199,6 +217,7 @@ class IcpTask(ARLResource):
 
         # 尝试通过天眼查 API 进行智能识别与全景升级
         matched_tyc = None
+        client = None
         from app.services.tycClient import TycClient
         try:
             client = TycClient()
@@ -214,6 +233,19 @@ class IcpTask(ARLResource):
                     matched_tyc = client.search_suggest(target_str)
         except Exception as e:
             logger.warning(f"Failed to auto-suggest tyc for target {target_str}: {e}")
+
+        # TYC 未配置或凭据失效时，尝试用小程序端兜底接口按名称解析企业，
+        # 使「企业全景测绘」在无商业凭据的情况下仍可完成对外投资穿透
+        if (not matched_tyc or not matched_tyc.get("gid")) \
+                and not target_str.startswith("TYC_") and not target_str.isdigit():
+            fallback_hit = _tyc_mini_search(target_str)
+            if fallback_hit and fallback_hit.get("gid"):
+                matched_tyc = {
+                    "gid": fallback_hit["gid"],
+                    "company_name": fallback_hit.get("name") or target_str
+                }
+                logger.info("TYC unavailable; resolved %s via mini-program fallback: gid=%s",
+                            target_str, fallback_hit["gid"])
 
         conn = conn_db('icp_task')
 
@@ -261,8 +293,10 @@ class IcpTask(ARLResource):
                 "company_name": official_company_name,
                 "name": final_name,
                 "type": "tyc",
-                "tyc_id": client.gid,
-                "tyc_token": client.token
+                # 凭据缺失时传空串：osint-service 据此启用小程序端兜底
+                # （client 可能因未配置而为 None，用 getattr 兜住）
+                "tyc_id": getattr(client, "gid", "") or "",
+                "tyc_token": getattr(client, "token", "") or ""
             }
             try:
                 _request_recon("start", options)
@@ -377,34 +411,50 @@ class TycTask(ARLResource):
 
         official_company_name = (company_name_arg or "").strip()
 
-        # 校验天眼查配置是否有效
+        # 校验天眼查配置；不可用时降级为小程序端兜底，不再直接拦截任务创建
         from app.services.tycClient import TycClient
+        tyc_ok = False
+        client = None
         try:
             client = TycClient()
             success, msg = client.check_token()
-            if not success:
-                return build_ret(msg, {})
+            tyc_ok = bool(success)
+            if not tyc_ok:
+                logger.warning(f"TYC credentials unavailable, falling back to mini-program API: {msg}")
         except Exception as e:
-            return build_ret(f"校验天眼查配置异常: {e}", {})
+            logger.warning(f"TYC credential check failed, falling back to mini-program API: {e}")
 
-        # 若 gid 为企业名称而非纯数字ID，自动通过 search_suggest 提取真实 GID
         gid_str = str(gid or '').strip()
-        if not gid_str.isdigit() and len(gid_str) >= 2:
-            try:
-                suggest_res = client.search_suggest(gid_str)
-                if suggest_res and suggest_res.get("gid"):
-                    gid = str(suggest_res["gid"])
-                    if not official_company_name:
-                        official_company_name = suggest_res.get("company_name", "")
-            except Exception as e:
-                logger.warning(f"Failed to auto-suggest tyc for {gid_str}: {e}")
 
-        # 定向解析企业官方工商全称（彻底脱钩用户任务自定义名称）
-        if not official_company_name:
-            try:
-                official_company_name = client.get_company_name(gid)
-            except Exception as e:
-                logger.warning(f"Failed to resolve company name for GID {gid}: {e}")
+        if tyc_ok:
+            # 若 gid 为企业名称而非纯数字ID，自动通过 search_suggest 提取真实 GID
+            if not gid_str.isdigit() and len(gid_str) >= 2:
+                try:
+                    suggest_res = client.search_suggest(gid_str)
+                    if suggest_res and suggest_res.get("gid"):
+                        gid = str(suggest_res["gid"])
+                        if not official_company_name:
+                            official_company_name = suggest_res.get("company_name", "")
+                except Exception as e:
+                    logger.warning(f"Failed to auto-suggest tyc for {gid_str}: {e}")
+
+            # 定向解析企业官方工商全称（彻底脱钩用户任务自定义名称）
+            if not official_company_name:
+                try:
+                    official_company_name = client.get_company_name(gid)
+                except Exception as e:
+                    logger.warning(f"Failed to resolve company name for GID {gid}: {e}")
+        else:
+            # 兜底链路只支持「名称 → GID」，无法按 GID 反查名称
+            if not gid_str.isdigit():
+                hit = _tyc_mini_search(gid_str or official_company_name)
+                if not hit:
+                    return build_ret(
+                        "天眼查凭据不可用，且兜底接口未检索到该企业。"
+                        "请确认企业名称准确，或在系统设置中配置有效的天眼查凭据。", {})
+                gid = hit["gid"]
+                if not official_company_name:
+                    official_company_name = hit.get("name", "")
 
         if not name or not name.strip():
             name = f"{official_company_name}企业测绘" if official_company_name else f"TYC_{gid}"
@@ -449,8 +499,9 @@ class TycTask(ARLResource):
         }
 
         options["type"] = "tyc"
-        options["tyc_id"] = client.gid
-        options["tyc_token"] = client.token
+        # 凭据不可用时传空串：osint-service 据此启用小程序端兜底
+        options["tyc_id"] = client.gid if tyc_ok else ""
+        options["tyc_token"] = client.token if tyc_ok else ""
         try:
             _request_recon("start", options)
         except Exception as e:

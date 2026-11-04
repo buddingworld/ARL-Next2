@@ -5,6 +5,7 @@ from datetime import datetime, timezone, timedelta
 from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
 from .tyc_async import AsyncTycClient
+from .tyc_mini_client import TycMiniClient
 from .zerozone_client import ZeroZoneClient, TYPE_MP, TYPE_OA
 import re
 import random
@@ -827,11 +828,13 @@ async def run_tyc_job(options):
     enable_icp = bool(options.get("enable_icp", True))
     tyc_id = options.get("tyc_id")
     tyc_token = options.get("tyc_token")
-    if not task_id or not tyc_id or not tyc_token:
-        logger.error(f"Missing required TYC params for task {task_id}")
-        if task_id:
-            await _abort_recon_task(task_id, "派发参数缺失", "任务派发参数不完整(缺少 task_id / 天眼查凭据)，无法启动测绘")
+    if not task_id:
+        logger.error("Missing required TYC params: task_id")
         return
+
+    # 未配置商业凭据（或凭据失效）时不中止任务，改用小程序端接口兜底。
+    # 兜底仅支持对外投资穿透，其余维度无对应接口，会按「未查询到记录」继续。
+    use_fallback = not (tyc_id and tyc_token)
     if not await _claim_recon_task(task_id):
         logger.warning(f"TYC task {task_id} claim rejected (already running or not in waiting state)")
         await _log_rejected_claim(task_id, "TYC查询")
@@ -905,7 +908,10 @@ async def run_tyc_job(options):
             root_company_name = task_doc.get("company_name").strip()
 
     sys_proxy = await _resolve_system_proxy(options)
-    client = AsyncTycClient(gid=tyc_id, token=tyc_token, proxy=sys_proxy)
+    if use_fallback:
+        client = TycMiniClient(percent_start=invest_ratio, proxy=sys_proxy)
+    else:
+        client = AsyncTycClient(gid=tyc_id, token=tyc_token, proxy=sys_proxy)
 
     # 若尚未获取官方全称，直接调用接口定向解析根企业全称
     if not root_company_name:
@@ -950,6 +956,13 @@ async def run_tyc_job(options):
     icp_tip = "开启" if enable_icp else "关闭"
     config_msg = f"任务开始运行，配置如下：目标(GID): {gid}，查询层数: {depth}，最低投资比例: {ratio_str}，需查询模块: {modules_str}，工信部ICP联动: {icp_tip}"
     await insert_syslog("info", "TYC查询", config_msg)
+    if use_fallback:
+        await insert_syslog(
+            "warning", "兜底查询",
+            "未检测到有效的天眼查商业凭据，已启用小程序端接口兜底：仅支持「对外投资」穿透，"
+            "网站 / APP / 公众号 / 微博 / 小程序备案等维度无对应接口、结果为空；"
+            "该接口为非公开接口，可能触发风控或返回不完整数据。"
+        )
     if icp_init_error:
         await insert_syslog(
             "warning", "工信部查重",

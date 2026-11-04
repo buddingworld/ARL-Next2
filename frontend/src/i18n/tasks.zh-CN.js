@@ -738,7 +738,7 @@ export default {
   "statusScheduled": "已计划",
   "paginationSummary": "共 {pages} 页 / {total} 条",
   "enterpriseReadyHint": "已就绪，支持天眼查股权穿透和工信部官方备案联合测绘。请输入天眼查链接、ID 或企业工商注册全称。",
-  "enterpriseIcpHint": "未配置天眼查 API，将通过工信部官方备案检索资产。如需股权穿透，请先配置凭据。",
+  "enterpriseIcpHint": "未配置天眼查 API 或凭据已失效：将通过工信部官方备案检索资产，并启用小程序端接口兜底查询。兜底方案仅支持对外投资穿透，可能触发风控或数据不齐全，建议配置正式凭据。",
   "investmentDepthHint": "当前设为 {depth} 层，递归查询企业会增加 API 请求次数，请注意查询额度。",
   "syncDescription": "此操作将选中的域名写入目标资产组，用于资产管理。只有启用立即探测并选择策略后，才会创建扫描任务。",
   "domainSummary": "本任务共有 {count} 个网站域名。",
@@ -779,5 +779,8 @@ export default {
   "miniProgramHomePage": "首页路径",
   "serviceType": "服务类型",
   "recordTime": "入库时间",
-  "recordType": "类型"
+  "recordType": "类型",
+
+  // ==================== Tianyancha fallback ====================
+  "tycUnavailableUsingFallback": "天眼查凭据不可用，本次将改用兜底接口查询（仅对外投资穿透，可能触发风控或数据不齐全）"
 };
