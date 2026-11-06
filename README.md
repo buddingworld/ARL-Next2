@@ -5,7 +5,7 @@
     <b>简体中文</b>
   </p>
 
-  # ARL-Next
+  # ARL-Next 【本项目仅是自己为了方便部署临时搭建，功能和官方原版完全相同，官方已经比本版本更新多了一万个功能，请认准官方原版 https://github.com/owl234/ARL-Next】
   **现代化资产测绘与漏洞监控平台**
 
   *Modern Attack Surface Reconnaissance & Asset Intelligence Platform*
